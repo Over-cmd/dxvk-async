@@ -31,30 +31,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl
 
-      # 3. PARCHE DE INYECCIÓN AGRESIVA (ELIMINAR EL CAPADO A 10.1 DEL CÓDIGO)
+      # 3. PARCHE DE INYECCIÓN QUIRÚRGICA: Forzar DX11_0 y habilitar Pippeto BCN Layer
       - name: Inyectar Parche de Compatibilidad PippetoCrypto BCN Layer y DX11 Real
         run: |
-          echo "Borrando físicamente el Feature Level 10.1 de todo el código de DXVK..."
-          
-          # Habilitamos el paso libre de hilos asíncronos (Async de Sporif)
+          echo "Habilitando el paso libre de hilos asíncronos (Async)..."
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/dxvk.enableAsync=false/dxvk.enableAsync=true/g' {} + || true
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/dxvk.numCompilerThreads=0/dxvk.numCompilerThreads=2/g' {} + || true
           
-          # Forzamos al validador de formatos BC a reportar soporte de texturas nativo para el Wrapper
+          echo "Forzando soporte de texturas BC en el validador lógico para el Wrapper..."
           find . -type f -name "*format*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           find . -type f -name "*device*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           
-          # PARCHE DE DESBLOQUEO INTEGRAL: Reemplazamos asignaciones de perfiles inferiores por 11_0 estricto
+          echo "Aplicando bypass de Feature Level de DirectX 11 de forma segura..."
+          # Reemplazamos las asignaciones de perfiles inferiores de forma masiva y limpia sin alterar la sintaxis de las variables
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_1/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_0/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_9_3/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           
-          # Forzamos las consultas lógicas a devolver siempre soporte máximo de DirectX 11 de fábrica
-          find . -type f -name "*device*.cpp" -exec sed -i 's/maxLevel =.*/maxLevel = D3D11_FEATURE_LEVEL_11_0;/g' {} + || true
-          
-          echo "¡El soporte inferior a DirectX 11 ha sido completamente extirpado del código fuente!"
+          echo "¡Bypass de hardware inyectado con éxito!"
 
-      # 4. PARCHE GCC 13 CORREGIDO: Inyectar <cstdint> de forma segura sin romper la sintaxis de YAML
+      # 4. PARCHE GCC 13: Inyectar <cstdint> en archivos C++ específicos y stdint.h en sha1
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
         run: |
           echo "Aplicando parches de tipos de datos de forma quirúrgica por archivo..."
@@ -63,12 +59,12 @@ jobs:
           sed -i '2i#include <cstdint>' src/util/util_vector.h
           sed -i '2i#include <cstdint>' src/util/config/config.h
           
-          # CORRECCIÓN DE ERROR SINTAXIS: Limpieza e inyección en sha1.h usando separadores limpios
+          # Limpieza e inyección en sha1.h usando separadores limpios
           sed -i 's/include <cstdint>/include <stdint.h>/g' src/util/sha1/sha1.h || true
           sed -i '2i#include <stdint.h>' src/util/sha1/sha1.h
           echo "¡Tipos de datos condicionales y matemáticos aislados con éxito!"
 
-      # 5. PARCHE COMPATIBILIDAD VULKAN 1.1: Degradar los requisitos de Vulkan en el código
+      # 5. PARCHE COMPATIBILIDAD VULKAN 1.1: Mantener la API degradada para la GPU Mali
       - name: Aplicar Parche de Compatibilidad Vulkan 1.1 Estable
         run: |
           echo "Rebajando requisitos de API de Vulkan en el código..."
@@ -195,4 +191,7 @@ jobs:
           gh release create "$TAG_NAME" \
             --repo "${{ github.repository }}" \
             --title "DXVK 1.10.3 Full DX11 Desbloqueado - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Librerías gráficas con eliminación absoluta de perfiles inferiores. Forzado Feature Level 11_0 nativo a nivel de código fuente enlazado al Wrapper de PippetoCrypto." \
+            --notes "Librerías gráficas con bypass seguro de perfiles inferiores. Forzado Feature Level 11_0 puro a nivel de código fuente enlazado al Wrapper de PippetoCrypto." \
+            dxvk_t618_full_bcn_layer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
