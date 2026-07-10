@@ -31,19 +31,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip
 
-      # 3. PARCHE GCC 13 SEGURO: Inyectar <cstdint> SOLO en archivos C++ (.cpp y .h), nunca en .c
+      # 3. PARCHE GCC 13 QUIRÚRGICO: Inyectar <cstdint> exclusivamente en código C++ y <stdint.h> en sha1
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
         run: |
-          echo "Inyectando <cstdint> de forma quirúrgica solo en el código C++ matemático..."
+          echo "Aplicando parches de tipos de datos de forma quirúrgica por archivo..."
           
-          # Forzamos la inserción en los dos archivos detectados originalmente con fallos
+          # Inyectamos <cstdint> estrictamente en las librerías C++ de matrices y vectores
           sed -i '2i#include <cstdint>' src/util/util_matrix.cpp
+          sed -i '2i#include <cstdint>' src/util/util_matrix.h
           sed -i '2i#include <cstdint>' src/util/util_vector.h
           
-          # Resguardo seguro: Inyectamos únicamente si el archivo es C++ (.cpp o .h) para no romper los archivos .c
-          find src/util/ -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i '2i#include <cstdint>' {} + || true
+          # Reparamos sha1.h para que use la cabecera estándar de C pura válida (stdint.h)
+          sed -i 's##include <cstdint>##g' src/util/sha1/sha1.h || true
+          sed -i '2i#include <stdint.h>' src/util/sha1/sha1.h
           
-          echo "¡Tipos de datos corregidos sin alterar el código C puro!"
+          echo "¡Tipos de datos aislados y blindados con éxito!"
 
       # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
       - name: Inyectar Lógica de Computación BCN Layer (Topología 8x4)
@@ -148,7 +150,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro corrigiendo la inyección de tipos en el módulo C de sha1." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro aplicando corrección de tipos aislada en C++ e inyectando stdint.h para sha1." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
