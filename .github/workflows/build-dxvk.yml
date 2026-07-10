@@ -15,35 +15,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clonar tu propio repositorio local de forma autónoma
-      - name: Checkout de tu propio repositorio
+      # 1. CLONADO HISTÓRICO COMPLETO: Descargamos todo tu historial de Git local (con todas las etiquetas ocultas)
+      - name: Checkout de tu propio repositorio completo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Instalar herramientas oficiales de compilación cruzada de Windows de alta velocidad
+      # 2. Instalar herramientas oficiales de compilación cruzada de Windows
       - name: Instalar Herramientas de Compilación Globales
         run: |
           sudo sed -i 's#http://ubuntu.com#http://ubuntu.com#g' /etc/apt/sources.list || true
           sudo sed -i 's#http://ubuntu.com#http://ubuntu.com#g' /etc/apt/sources.list || true
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl unzip
+          sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl
 
-      # 3. PARCHE DE EXTRACCIÓN ZIP: Forzar la descarga del código 1.10.3 en formato ZIP plano e inmune a errores
-      - name: Blindar Código Fuente Local (Modo Respaldo ZIP)
+      # 3. PARCHE LOCAL INTERNO (SIN INTERNET): Forzar el salto a la etiqueta con el código fuente real
+      - name: Destrabar Código Fuente mediante Git Local
         run: |
+          echo "Verificando si estamos en una rama vacía..."
           if [ ! -f "meson.build" ]; then
-            echo "La rama actual está vacía. Descargando la base de código 1.10.3 en ZIP plano..."
-            curl -L "https://github.com" -o /tmp/dxvk.zip
-            
-            echo "Extrayendo el contenido en el espacio de trabajo..."
-            mkdir -p /tmp/dxvk_extracted
-            unzip -q /tmp/dxvk.zip -d /tmp/dxvk_extracted
-            
-            echo "Aplanando carpetas para colocar el archivo meson.build en la raíz..."
-            mv /tmp/dxvk_extracted/dxvk-*/* .
+            echo "Rama vacía detectada. Forzando salto a la etiqueta local v1.10.3 heredada de Sporif..."
+            # Obligamos a Git a extraer el código que ya está descargado en el historial interno de la máquina
+            git checkout v1.10.3 || git checkout tags/v1.10.3 || git checkout master
           fi
-          echo "¡Archivos lógicos y meson.build listos en la raíz!"
+          echo "¡Archivos lógicos recuperados de forma local!"
 
       # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
       - name: Inyectar Lógica de Computación BCN Layer (Topología 8x4)
@@ -159,7 +154,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX8/9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 empleando extracción ZIP local directa de Khronos." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 empleando extracción nativa forzada del árbol histórico local." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
