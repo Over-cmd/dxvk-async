@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. CLONADO NATIVO AUTÓNOMO: Descarga tu propio repositorio local sin depender de Sporif ni mirrors externos
+      # 1. Clonar tu propio repositorio local de forma autónoma
       - name: Checkout de tu propio repositorio
         uses: actions/checkout@v4
         with:
@@ -27,17 +27,23 @@ jobs:
           sudo sed -i 's#http://ubuntu.com#http://ubuntu.com#g' /etc/apt/sources.list || true
           sudo sed -i 's#http://ubuntu.com#http://ubuntu.com#g' /etc/apt/sources.list || true
           sudo apt-get update
-          sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl
+          sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl unzip
 
-      # 3. VERIFICADOR DE ARCHIVOS RAÍZ: Si tu rama master está vacía, descargamos el zip de respaldo estable 1.10.3
-      - name: Blindar Código Fuente Local (Modo Respaldo Alternativo)
+      # 3. PARCHE DE EXTRACCIÓN ZIP: Forzar la descarga del código 1.10.3 en formato ZIP plano e inmune a errores
+      - name: Blindar Código Fuente Local (Modo Respaldo ZIP)
         run: |
           if [ ! -f "meson.build" ]; then
-            echo "La rama actual está vacía. Descargando la base de código 1.10.3 directa de Khronos..."
-            curl -L "https://github.com" -o /tmp/dxvk.tar.gz
-            tar -xzf /tmp/dxvk.tar.gz -C . --strip-components=1
+            echo "La rama actual está vacía. Descargando la base de código 1.10.3 en ZIP plano..."
+            curl -L "https://github.com" -o /tmp/dxvk.zip
+            
+            echo "Extrayendo el contenido en el espacio de trabajo..."
+            mkdir -p /tmp/dxvk_extracted
+            unzip -q /tmp/dxvk.zip -d /tmp/dxvk_extracted
+            
+            echo "Aplanando carpetas para colocar el archivo meson.build en la raíz..."
+            mv /tmp/dxvk_extracted/dxvk-*/* .
           fi
-          echo "¡Archivos listos en el espacio de trabajo!"
+          echo "¡Archivos lógicos y meson.build listos en la raíz!"
 
       # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
       - name: Inyectar Lógica de Computación BCN Layer (Topología 8x4)
@@ -153,7 +159,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX8/9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 para tu GPU Mali-G52 MP2 empleando un sistema de extracción autónomo inmune a la eliminación de repositorios externos." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 empleando extracción ZIP local directa de Khronos." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
