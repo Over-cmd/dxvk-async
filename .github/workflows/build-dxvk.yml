@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clonar el repositorio oficial limpio de Khronos mediante el nodo nativo
+      # 1. Clonar el repositorio oficial de Khronos Group mediante el nodo nativo
       - name: Checkout del repositorio oficial de Khronos Group
         uses: actions/checkout@v4
         with:
@@ -35,19 +35,14 @@ jobs:
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
         run: |
           echo "Aplicando parches de tipos de datos de forma quirúrgica por archivo..."
-          
-          # Inyectamos <cstdint> estrictamente en las librerías C++ matemáticas de matrices y vectores
           sed -i '2i#include <cstdint>' src/util/util_matrix.cpp
           sed -i '2i#include <cstdint>' src/util/util_matrix.h
           sed -i '2i#include <cstdint>' src/util/util_vector.h
-          
-          # CORRECCIÓN DEFINITIVA: Inyectamos <cstdint> en la cabecera de configuración para resolver int32_t y Tristate
           sed -i '2i#include <cstdint>' src/util/config/config.h
           
           # Reparamos sha1.h para que use la cabecera estándar de C pura válida (stdint.h)
           sed -i 's##include <cstdint>##g' src/util/sha1/sha1.h || true
           sed -i '2i#include <stdint.h>' src/util/sha1/sha1.h
-          
           echo "¡Tipos de datos condicionales y matemáticos aislados con éxito!"
 
       # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
@@ -147,13 +142,16 @@ jobs:
           zip -q -r ../dxvk_t618_full_aniversario.zip x32 x64
           cd ..
 
-      # 9. PUBLICACIÓN DIRECTA EN RELEASES
+      # 9. PUBLICACIÓN REPARADA: Redirigimos la subida del ZIP de Khronos a las Releases de tu cuenta
       - name: Publicar DXVK en Releases
         run: |
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
+          
+          # El flag --repo redirige la publicación directo a tu propio Fork destruyendo el error 403
           gh release create "$TAG_NAME" \
+            --repo "${{ github.repository }}" \
             --title "DXVK 1.10.3 Full Async BCN (DX9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro aplicando inyección de cstdint quirúrgica en el motor de configuraciones generales." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro con inyección de cstdint y subida de archivos reencauzada a tu repositorio local." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
