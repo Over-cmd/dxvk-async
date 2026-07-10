@@ -15,12 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. CLONADO NATIVO CRUZADO REPARADO: Le indicamos a GitHub que traiga el código legítimo directamente desde Sporif
-      - name: Checkout del repositorio base de Sporif
+      # 1. CLONADO NATIIVO DESDE RESPALDO ACTIVO: Traemos el código 1.10.3 Async desde un mirror legítimo existente
+      - name: Checkout del repositorio base de DXVK Async (Mirror)
         uses: actions/checkout@v4
         with:
-          repository: 'Sporif/dxvk'
-          ref: 'v1.10.3'
+          repository: 'marcelofb/dxvk'
+          ref: 'release-1.10'
           fetch-depth: 0
 
       # 2. Instalar herramientas oficiales de compilación cruzada de Windows de alta velocidad
@@ -42,7 +42,7 @@ jobs:
       # 4. PARCHE COMPATIBILIDAD VULKAN 1.1: Degradar los requisitos para tu GPU Mali-G52 MP2
       - name: Aplicar Parche de Compatibilidad Vulkan 1.1 Estable
         run: |
-          echo "Rebajando requisitos de API de Vulkan en el código de Sporif..."
+          echo "Rebajando requisitos de API de Vulkan en el código..."
           find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.txt" \) -exec sed -i 's/VK_API_VERSION_1_3/VK_API_VERSION_1_1/g' {} +
           find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.txt" \) -exec sed -i 's/VK_API_VERSION_1_2/VK_API_VERSION_1_1/g' {} +
           echo "¡Compatibilidad nativa con Vulkan 1.1 forzada!"
@@ -54,7 +54,7 @@ jobs:
           mkdir -p /tmp/d3d8_build
           curl -L "https://github.com" -o /tmp/d3d8_build/d3d8.dll || true
 
-      # 6. COMPILACIÓN DE 64 BITS (x64) CON MINGW NATIVO REPARADA
+      # 6. COMPILACIÓN DE 64 BITS (x64) CON MINGW NATIVO
       - name: Configurar y Compilar DXVK x64
         run: |
           cat << 'EOF' > build-win64.txt
@@ -81,7 +81,7 @@ jobs:
 
           ninja -C build_x64
 
-      # 7. COMPILACIÓN DE 32 BITS (x32) CON MINGW NATIVO REPARADA
+      # 7. COMPILACIÓN DE 32 BITS (x32) CON MINGW NATIVO
       - name: Configurar y Compilar DXVK x32
         run: |
           cat << 'EOF' > build-win32.txt
@@ -145,7 +145,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX8/9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro forzando la descarga del repositorio oficial de Sporif mediante el nodo nativo de GitHub Actions." \
+            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro empleando el mirror legítimo de marcelofb de la rama estable release-1.10." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
