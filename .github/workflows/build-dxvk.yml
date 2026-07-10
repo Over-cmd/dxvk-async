@@ -31,10 +31,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip curl
 
-      # 3. PARCHE INTERNO DE INYECCIÓN DE PIPPETOCRYPTO + DESBLOQUEO REAL DE DIRECTX 11
+      # 3. PARCHE DE INYECCIÓN AGRESIVA (ELIMINAR EL CAPADO A 10.1 DEL CÓDIGO)
       - name: Inyectar Parche de Compatibilidad PippetoCrypto BCN Layer y DX11 Real
         run: |
-          echo "Rompiendo los límites de hardware para forzar DirectX 11_0 en la GPU Mali-G52..."
+          echo "Borrando físicamente el Feature Level 10.1 de todo el código de DXVK..."
           
           # Habilitamos el paso libre de hilos asíncronos (Async de Sporif)
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/dxvk.enableAsync=false/dxvk.enableAsync=true/g' {} + || true
@@ -44,11 +44,15 @@ jobs:
           find . -type f -name "*format*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           find . -type f -name "*device*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           
-          # PARCHE DE DESBLOQUEO CRÍTICO DX11: Forzamos a DXVK a ignorar el capado automático y reportar 11_0 obligatorio
-          find . -type f -name "*device*.cpp" -exec sed -i 's/m_featureLevel = D3D11_FEATURE_LEVEL_10_1/m_featureLevel = D3D11_FEATURE_LEVEL_11_0/g' {} + || true
-          find . -type f -name "*device*.cpp" -exec sed -i 's/maxLevel = D3D11_FEATURE_LEVEL_10_1/maxLevel = D3D11_FEATURE_LEVEL_11_0/g' {} + || true
+          # PARCHE DE DESBLOQUEO INTEGRAL: Reemplazamos CUALQUIER asignación o retorno de 10_1, 10_0 o 9_3 por 11_0 estricto
+          find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_1/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
+          find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_0/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
+          find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_9_3/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           
-          echo "¡Límites de DirectX 11 y texturas BCN modificados a nivel de código de fábrica!"
+          # Forzamos las consultas lógicas a devolver siempre soporte máximo de DirectX 11 de fábrica
+          find . -type f -name "*device*.cpp" -exec sed -i 's/maxLevel =/maxLevel = D3D11_FEATURE_LEVEL_11_0;/g' {} + || true
+          
+          echo "¡El soporte inferior a DirectX 11 ha sido completamente extirpado del código fuente!"
 
       # 4. PARCHE GCC 13: Inyectar <cstdint> en archivos C++ específicos y stdint.h en sha1
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
@@ -190,8 +194,7 @@ jobs:
           
           gh release create "$TAG_NAME" \
             --repo "${{ github.repository }}" \
-            --title "DXVK 1.10.3 Todo-en-Uno Pippeto BCN - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Ecosistema gráfico total (DX8/9/10/11) con bypass forzado de feature level 11_0 e inyección de dxvk.conf preestablecido para el Wrapper." \
+            --title "DXVK 1.10.3 Full DX11 Desbloqueado - Unisoc T618 (Build #${{ github.run_number }})" \
+            --notes "Librerías gráficas con eliminación absoluta de perfiles inferiores. Forzado Feature Level 11_0 nativo a nivel de código fuente enlazado al Wrapper de PippetoCrypto." \
             dxvk_t618_full_bcn_layer.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
