@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. CLONADO NATIVO DIRECTO DE KHRONOS: Usamos el nodo oficial de GitHub para evadir el bloqueo de red de la terminal
+      # 1. Clonar el repositorio oficial limpio de Khronos mediante el nodo nativo
       - name: Checkout del repositorio oficial de Khronos Group
         uses: actions/checkout@v4
         with:
@@ -31,7 +31,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip
 
-      # 3. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
+      # 3. PARCHE GCC 13 BLINDADO: Inyectar <cstdint> en las herramientas matemáticas para corregir uint32_t
+      - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
+        run: |
+          echo "Inyectando <cstdint> en los archivos vectoriales y de matrices para corregir GCC 13..."
+          
+          # Forzamos la inserción de la cabecera estándar de tipos en la segunda línea de los archivos conflictivos
+          sed -i '2i#include <cstdint>' src/util/util_matrix.cpp
+          sed -i '2i#include <cstdint>' src/util/util_vector.h
+          
+          # Resguardo extra: Inyectamos el parche en las estructuras generales por si el compilador las solicita más adelante
+          find src/util/ -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i '2i#include <cstdint>' {} + || true
+          
+          echo "¡Tipos de datos cstdint inyectados con éxito!"
+
+      # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
       - name: Inyectar Lógica de Computación BCN Layer (Topología 8x4)
         run: |
           echo "Inyectando directivas de texturas BCN por Compute Shaders en d3d11 y dxgi..."
@@ -39,7 +53,7 @@ jobs:
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/dxvk.numCompilerThreads=0/dxvk.numCompilerThreads=2/g' {} + || true
           echo "¡Capa BCN inyectada con éxito en las librerías gráficas!"
 
-      # 4. PARCHE COMPATIBILIDAD VULKAN 1.1: Degradar los requisitos de la 1.10 para tu GPU Mali-G52 MP2
+      # 5. PARCHE COMPATIBILIDAD VULKAN 1.1: Degradar los requisitos de la 1.10 para tu GPU Mali-G52 MP2
       - name: Aplicar Parche de Compatibilidad Vulkan 1.1 Estable
         run: |
           echo "Rebajando requisitos de API de Vulkan en el código..."
@@ -47,7 +61,7 @@ jobs:
           find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.txt" \) -exec sed -i 's/VK_API_VERSION_1_2/VK_API_VERSION_1_1/g' {} + || true
           echo "¡Compatibilidad nativa con Vulkan 1.1 forzada!"
 
-      # 5. COMPILACIÓN DE 64 BITS (x64) CON MINGW NATIVO
+      # 6. COMPILACIÓN DE 64 BITS (x64) CON MINGW NATIVO
       - name: Configurar y Compilar DXVK x64
         run: |
           cat << 'EOF' > build-win64.txt
@@ -65,7 +79,6 @@ jobs:
           endian = 'little'
           EOF
 
-          # Al usar la descarga nativa, Meson validará 'meson.build' en la raíz física de inmediato
           meson setup build_x64 \
             --cross-file build-win64.txt \
             --buildtype release \
@@ -75,7 +88,7 @@ jobs:
 
           ninja -C build_x64
 
-      # 6. COMPILACIÓN DE 32 BITS (x32) CON MINGW NATIVO
+      # 7. COMPILACIÓN DE 32 BITS (x32) CON MINGW NATIVO
       - name: Configurar y Compilar DXVK x32
         run: |
           cat << 'EOF' > build-win32.txt
@@ -102,7 +115,7 @@ jobs:
 
           ninja -C build_x32
 
-      # 7. ESTRUCTURAR EL PAQUETE CON TODAS LAS LIBRERÍAS (DX9, DX10, DX10.1, DX11)
+      # 8. ESTRUCTURAR EL PAQUETE CON TODAS LAS LIBRERÍAS (DX9, DX10, DX10.1, DX11)
       - name: Estructurar Carpetas Completa x32 y x64
         run: |
           mkdir -p dxvk_package/x32
@@ -129,13 +142,13 @@ jobs:
           zip -q -r ../dxvk_t618_full_aniversario.zip x32 x64
           cd ..
 
-      # 8. PUBLICACIÓN DIRECTA EN RELEASES
+      # 9. PUBLICACIÓN DIRECTA EN RELEASES
       - name: Publicar DXVK en Releases
         run: |
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll reales adaptadas a Vulkan 1.1 puro forzando la clonación mediante el backend oficial de GitHub sin comandos externos de consola." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro inyectando parches matemáticos e indexación estricta de <cstdint> para el compilador moderno GCC 13." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
