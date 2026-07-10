@@ -44,17 +44,17 @@ jobs:
           find . -type f -name "*format*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           find . -type f -name "*device*.cpp" -exec sed -i 's/features.textureCompressionBC = false/features.textureCompressionBC = true/g' {} + || true
           
-          # PARCHE DE DESBLOQUEO INTEGRAL: Reemplazamos CUALQUIER asignación o retorno de 10_1, 10_0 o 9_3 por 11_0 estricto
+          # PARCHE DE DESBLOQUEO INTEGRAL: Reemplazamos asignaciones de perfiles inferiores por 11_0 estricto
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_1/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_10_0/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           find . -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i 's/D3D11_FEATURE_LEVEL_9_3/D3D11_FEATURE_LEVEL_11_0/g' {} + || true
           
           # Forzamos las consultas lógicas a devolver siempre soporte máximo de DirectX 11 de fábrica
-          find . -type f -name "*device*.cpp" -exec sed -i 's/maxLevel =/maxLevel = D3D11_FEATURE_LEVEL_11_0;/g' {} + || true
+          find . -type f -name "*device*.cpp" -exec sed -i 's/maxLevel =.*/maxLevel = D3D11_FEATURE_LEVEL_11_0;/g' {} + || true
           
           echo "¡El soporte inferior a DirectX 11 ha sido completamente extirpado del código fuente!"
 
-      # 4. PARCHE GCC 13: Inyectar <cstdint> en archivos C++ específicos y stdint.h en sha1
+      # 4. PARCHE GCC 13 CORREGIDO: Inyectar <cstdint> de forma segura sin romper la sintaxis de YAML
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
         run: |
           echo "Aplicando parches de tipos de datos de forma quirúrgica por archivo..."
@@ -63,8 +63,8 @@ jobs:
           sed -i '2i#include <cstdint>' src/util/util_vector.h
           sed -i '2i#include <cstdint>' src/util/config/config.h
           
-          # Reparamos sha1.h para que use la cabecera estándar de C pura válida (stdint.h)
-          sed -i 's##include <cstdint>##g' src/util/sha1/sha1.h || true
+          # CORRECCIÓN DE ERROR SINTAXIS: Limpieza e inyección en sha1.h usando separadores limpios
+          sed -i 's/include <cstdint>/include <stdint.h>/g' src/util/sha1/sha1.h || true
           sed -i '2i#include <stdint.h>' src/util/sha1/sha1.h
           echo "¡Tipos de datos condicionales y matemáticos aislados con éxito!"
 
@@ -196,5 +196,3 @@ jobs:
             --repo "${{ github.repository }}" \
             --title "DXVK 1.10.3 Full DX11 Desbloqueado - Unisoc T618 (Build #${{ github.run_number }})" \
             --notes "Librerías gráficas con eliminación absoluta de perfiles inferiores. Forzado Feature Level 11_0 nativo a nivel de código fuente enlazado al Wrapper de PippetoCrypto." \
-            dxvk_t618_full_bcn_layer.zip
-        env:
