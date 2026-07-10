@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. FORZADO DE DESCARGA DIRECTA: Clonamos la etiqueta legítima v1.10.3 directo desde el root original de Sporif
-      - name: Descargar Código Base de Sporif
-        run: |
-          echo "Clonando la etiqueta oficial v1.10.3 directamente desde el repositorio central de Sporif..."
-          git clone --depth 1 --branch v1.10.3 https://github.com .
-          echo "¡Código fuente clásico descargado con éxito en el servidor!"
+      # 1. CLONADO NATIVO CRUZADO REPARADO: Le indicamos a GitHub que traiga el código legítimo directamente desde Sporif
+      - name: Checkout del repositorio base de Sporif
+        uses: actions/checkout@v4
+        with:
+          repository: 'Sporif/dxvk'
+          ref: 'v1.10.3'
+          fetch-depth: 0
 
       # 2. Instalar herramientas oficiales de compilación cruzada de Windows de alta velocidad
       - name: Instalar Herramientas de Compilación Globales
@@ -144,7 +145,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX8/9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro forzando la descarga directa externa del árbol de Khronos de Sporif." \
+            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro forzando la descarga del repositorio oficial de Sporif mediante el nodo nativo de GitHub Actions." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
