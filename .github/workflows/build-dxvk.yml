@@ -15,14 +15,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. CLONADO POR ETIQUETA: Forzamos la descarga de la etiqueta física v1.10.3 que sí tiene el código fuente
-      - name: Checkout del repositorio
-        uses: actions/checkout@v4
-        with:
-          ref: 'v1.10.3'
-          fetch-depth: 0
+      # 1. FORZADO DE DESCARGA DIRECTA: Clonamos la etiqueta legítima v1.10.3 directo desde el root original de Sporif
+      - name: Descargar Código Base de Sporif
+        run: |
+          echo "Clonando la etiqueta oficial v1.10.3 directamente desde el repositorio central de Sporif..."
+          git clone --depth 1 --branch v1.10.3 https://github.com .
+          echo "¡Código fuente clásico descargado con éxito en el servidor!"
 
-      # 2. Instalar herramientas oficiales de compilación cruzada de Windows
+      # 2. Instalar herramientas oficiales de compilación cruzada de Windows de alta velocidad
       - name: Instalar Herramientas de Compilación Globales
         run: |
           sudo sed -i 's#http://ubuntu.com#http://ubuntu.com#g' /etc/apt/sources.list || true
@@ -86,7 +86,7 @@ jobs:
           cat << 'EOF' > build-win32.txt
           [binaries]
           c     = 'i686-w64-mingw32-gcc'
-          cpp     = 'i686-w64-mingw32-g++'
+          cpp   = 'i686-w64-mingw32-g++'
           ar    = 'i686-w64-mingw32-ar'
           strip = 'i686-w64-mingw32-strip'
           windres = 'i686-w64-mingw32-windres'
@@ -144,7 +144,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX8/9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro forzando el clonado por la etiqueta de la versión estable v1.10.3." \
+            --notes "Set completo de librerías gráficas .dll adaptadas a Vulkan 1.1 puro forzando la descarga directa externa del árbol de Khronos de Sporif." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
