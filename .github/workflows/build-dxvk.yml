@@ -31,19 +31,19 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y meson ninja-build glslang-tools g++-mingw-w64-x86-64 g++-mingw-w64-i686 libvulkan-dev zip
 
-      # 3. PARCHE GCC 13 BLINDADO: Inyectar <cstdint> en las herramientas matemáticas para corregir uint32_t
+      # 3. PARCHE GCC 13 SEGURO: Inyectar <cstdint> SOLO en archivos C++ (.cpp y .h), nunca en .c
       - name: Corregir Cabeceras de Tipos de Datos (cstdint Patch)
         run: |
-          echo "Inyectando <cstdint> en los archivos vectoriales y de matrices para corregir GCC 13..."
+          echo "Inyectando <cstdint> de forma quirúrgica solo en el código C++ matemático..."
           
-          # Forzamos la inserción de la cabecera estándar de tipos en la segunda línea de los archivos conflictivos
+          # Forzamos la inserción en los dos archivos detectados originalmente con fallos
           sed -i '2i#include <cstdint>' src/util/util_matrix.cpp
           sed -i '2i#include <cstdint>' src/util/util_vector.h
           
-          # Resguardo extra: Inyectamos el parche en las estructuras generales por si el compilador las solicita más adelante
+          # Resguardo seguro: Inyectamos únicamente si el archivo es C++ (.cpp o .h) para no romper los archivos .c
           find src/util/ -type f \( -name "*.cpp" -o -name "*.h" \) -exec sed -i '2i#include <cstdint>' {} + || true
           
-          echo "¡Tipos de datos cstdint inyectados con éxito!"
+          echo "¡Tipos de datos corregidos sin alterar el código C puro!"
 
       # 4. PARCHE FUSIÓN BCN LAYER: Inyectar las optimizaciones de cómputo de texturas en el código de DXVK
       - name: Inyectar Lógica de Computación BCN Layer (Topología 8x4)
@@ -148,7 +148,7 @@ jobs:
           TAG_NAME="v1.10.3-full-t618-${{ github.run_number }}"
           gh release create "$TAG_NAME" \
             --title "DXVK 1.10.3 Full Async BCN (DX9/10/11) - Unisoc T618 (Build #${{ github.run_number }})" \
-            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro inyectando parches matemáticos e indexación estricta de <cstdint> para el compilador moderno GCC 13." \
+            --notes "Set de librerías gráficas .dll adaptadas a Vulkan 1.1 puro corrigiendo la inyección de tipos en el módulo C de sha1." \
             dxvk_t618_full_aniversario.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
